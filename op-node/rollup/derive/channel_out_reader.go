@@ -86,6 +86,7 @@ func (cr *channelOutReader) readBatch() (*BatchData, error) {
 		Epoch:        rollup.Epoch(ref.L1Origin.Number), // the L1 block number equals the L2 epoch.
 		Timestamp:    uint64(payload.Timestamp),
 		Transactions: opaqueTxs,
+		BlockNumber:  uint64(payload.BlockNumber),
 	}}, nil
 }
 

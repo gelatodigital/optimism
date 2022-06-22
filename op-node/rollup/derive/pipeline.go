@@ -79,13 +79,14 @@ type DerivationPipeline struct {
 // NewDerivationPipeline creates a derivation pipeline, which should be reset before use.
 func NewDerivationPipeline(log log.Logger, cfg *rollup.Config, l1Fetcher L1Fetcher, engine Engine) *DerivationPipeline {
 	eng := NewEngineQueue(log, cfg, engine)
-	batchQueue := NewBatchQueue(log, cfg, l1Fetcher, eng)
+	payloadQueue := NewPayloadQueue(log, cfg, l1Fetcher, eng)
+	batchQueue := NewBatchQueue(log, cfg, l1Fetcher, payloadQueue)
 	chInReader := NewChannelInReader(log, batchQueue)
 	bank := NewChannelBank(log, cfg, chInReader)
 	dataSrc := NewCalldataSource(log, cfg, l1Fetcher)
 	l1Src := NewL1Source(log, dataSrc, bank)
 	l1Traversal := NewL1Traversal(log, l1Fetcher, l1Src)
-	stages := []Stage{eng, batchQueue, chInReader, bank, l1Src, l1Traversal}
+	stages := []Stage{eng, payloadQueue, batchQueue, chInReader, bank, l1Src, l1Traversal}
 
 	return &DerivationPipeline{
 		log:       log,
@@ -151,10 +152,12 @@ func (dp *DerivationPipeline) Step(ctx context.Context) error {
 		}
 	}
 
-	for _, stage := range dp.stages {
+	for i, stage := range dp.stages {
 		if err := stage.Step(ctx); err == io.EOF {
+			dp.log.Trace("EOF on stage", "stage_number", i)
 			continue
 		} else if err != nil {
+			dp.log.Trace("Error on stage", "stage_number", i, "err", err)
 			return err
 		} else {
 			return nil

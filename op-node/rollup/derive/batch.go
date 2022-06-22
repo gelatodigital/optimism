@@ -16,7 +16,7 @@ import (
 // first byte is type followed by bytestring.
 //
 // BatchV1Type := 0
-// batchV1 := BatchV1Type ++ RLP([epoch, timestamp, transaction_list]
+// batchV1 := BatchV1Type ++ RLP([blocknumber, timestamp, epoch, transaction_list]
 //
 // An empty input is not a valid batch.
 //
@@ -32,8 +32,11 @@ const (
 )
 
 type BatchV1 struct {
-	Epoch     rollup.Epoch // aka l1 num
-	Timestamp uint64
+	BlockNumber uint64
+	Timestamp   uint64
+	Epoch       rollup.Epoch // aka l1 num
+	// TODO: Add L1 Block Hash here?
+	// TODO: Extend with L2 parent block hash?
 	// no feeRecipient address input, all fees go to a L2 contract
 	Transactions []hexutil.Bytes
 }

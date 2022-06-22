@@ -152,7 +152,7 @@ func (cr *ChannelInReader) Step(ctx context.Context) error {
 		cr.NextChannel()
 		return nil
 	}
-	cr.log.Debug("reading channel", "batch_epoch", batch.Epoch, "batch_timestamp", batch.Timestamp, "txs", len(batch.Transactions))
+	cr.log.Info("reading channel", "batch_number", batch.BlockNumber, "batch_epoch", batch.Epoch, "batch_timestamp", batch.Timestamp, "txs", len(batch.Transactions))
 	return cr.next.AddBatch(&batch)
 }
 

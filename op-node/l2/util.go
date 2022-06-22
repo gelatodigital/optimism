@@ -113,6 +113,7 @@ func BlockToBatch(config *rollup.Config, block *types.Block) (*derive.BatchData,
 		return nil, fmt.Errorf("invalid L1 info deposit tx in block: %v", err)
 	}
 	return &derive.BatchData{BatchV1: derive.BatchV1{
+		BlockNumber:  block.NumberU64(),
 		Epoch:        rollup.Epoch(l1Info.Number), // the L1 block number equals the L2 epoch.
 		Timestamp:    block.Time(),
 		Transactions: opaqueTxs,

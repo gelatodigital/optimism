@@ -310,6 +310,7 @@ func (s *state) eventLoop() {
 			err := s.derivation.Step(stepCtx)
 			cancel()
 			if err == io.EOF {
+				s.log.Info("err eof")
 				continue
 			} else if err != nil {
 				s.log.Warn("derivation pipeline critically failed, resetting it", "err", err)
