@@ -100,6 +100,7 @@ func (bq *BatchQueue) IsOriginOpen() bool {
 func (bq *BatchQueue) Step(ctx context.Context) error {
 	batches := bq.deriveBatches(bq.next.SafeL2Head())
 	if len(batches) == 0 {
+		bq.log.Trace("Out of batches")
 		return io.EOF
 	}
 
@@ -182,18 +183,25 @@ func (bq *BatchQueue) AddBatch(batch *BatchData) error {
 // validExtension determines if a batch follows the previous attributes
 func validExtension(cfg *rollup.Config, batch *BatchWithL1InclusionBlock, prevNumber, prevTime, prevEpoch uint64) bool {
 	if batch.Batch.BlockNumber != prevNumber+1 {
+		fmt.Println("Invalid number in valid extension")
+
 		return false
 	}
 	if batch.Batch.Timestamp != prevTime+cfg.BlockTime {
+		fmt.Println("Invalid time in valid extension")
+
 		return false
 	}
 	if batch.Batch.Epoch != rollup.Epoch(prevEpoch) && batch.Batch.Epoch != rollup.Epoch(prevEpoch+1) {
+		fmt.Println("Invalid epoch in valid extension")
+
 		return false
 	}
 	// TODO (VERY IMPORTANT): Filter this batch out if the origin of the batch is too far past the epoch
 	// TODO (ALSO VERY IMPT): Get this equality check correct
 	// TODO: Also do this check when ingesting batches.
 	if uint64(batch.Batch.Epoch) >= batch.L1InclusionBlock.Number+cfg.SeqWindowSize {
+		fmt.Println("Invalid inclusion in valid extension")
 		return false
 	}
 	return true
@@ -206,6 +214,7 @@ func (bq *BatchQueue) deriveBatches(l2SafeHead eth.L2BlockRef) []*BatchWithL1Inc
 	// Decide if need to fill out empty batches & process an epoch at once
 	// If not, just return a single batch
 	if bq.CurrentOrigin().Number >= bq.epoch+bq.config.SeqWindowSize {
+		bq.log.Info("Advancing full epcoh")
 		// 2a. Gather all batches. First sort by number and then by first seen.
 		var bns []uint64
 		for n := range bq.batchesByNumber {
@@ -240,7 +249,7 @@ func (bq *BatchQueue) deriveBatches(l2SafeHead eth.L2BlockRef) []*BatchWithL1Inc
 		batches = FilterBatchesV2(bq.config, rollup.Epoch(bq.epoch), minL2Time, maxL2Time, batches)
 		bq.log.Warn("filtered batches", "len", len(batches), "l1Origin", bq.l1Blocks[0], "nextL1Block", bq.l1Blocks[1])
 		batches = FillMissingBatchesV2(batches, bq.epoch, bq.config.BlockTime, minL2Time, nextL1BlockTime, l2SafeHead.Number)
-
+		bq.log.Info("added missing batches", "len", len(batches), "l1OriginTime", l1OriginTime, "nextL1BlockTime", nextL1BlockTime)
 		// Advance an epoch after filling all batches.
 		bq.epoch += 1
 		bq.l1Blocks = bq.l1Blocks[1:]
@@ -248,6 +257,7 @@ func (bq *BatchQueue) deriveBatches(l2SafeHead eth.L2BlockRef) []*BatchWithL1Inc
 		return batches
 
 	} else {
+		// bq.log.Info("Trying to eagerly find batch", "batches", bq.batchesByNumber)
 		var ret []*BatchWithL1InclusionBlock
 		next := bq.tryPopNextBatch(l2SafeHead)
 		if next != nil {
@@ -267,7 +277,10 @@ func (bq *BatchQueue) tryPopNextBatch(l2SafeHead eth.L2BlockRef) *BatchWithL1Inc
 	batches, ok := bq.batchesByNumber[l2SafeHead.Number+1]
 	// No more batches found. Rely on another function to fill missing batches for us.
 	if !ok {
+		// bq.log.Info("Did not find batch")
 		return nil
+	} else {
+		bq.log.Info("Found batch", "batches", batches)
 	}
 
 	// Find the first batch saved for this number.
@@ -283,6 +296,7 @@ func (bq *BatchQueue) tryPopNextBatch(l2SafeHead eth.L2BlockRef) *BatchWithL1Inc
 			// more information otherwise the eager algorithm may diverge from a non-eager
 			// algorithm.
 			if len(bq.l1Blocks) < 2 {
+				bq.log.Warn("eager batch wants to advance epoch, but could not")
 				return nil
 			}
 			l1OriginTime = bq.l1Blocks[1].Time
@@ -298,6 +312,7 @@ func (bq *BatchQueue) tryPopNextBatch(l2SafeHead eth.L2BlockRef) *BatchWithL1Inc
 		// Note: Don't check epoch here, check it in `validExtension`
 		// Mainly check tx validity + timestamp bounds
 		if err := ValidBatch(batch.Batch, bq.config, batch.Batch.Epoch, minL2Time, maxL2Time); err != nil {
+			bq.log.Warn("Invalid batch", "err", err)
 			break
 		}
 
@@ -311,8 +326,12 @@ func (bq *BatchQueue) tryPopNextBatch(l2SafeHead eth.L2BlockRef) *BatchWithL1Inc
 			// Don't leak data in the map
 			delete(bq.batchesByNumber, batch.Batch.BlockNumber)
 
+			bq.log.Info("Batch was valid extension")
+
 			// We have found the fist valid batch.
 			return batch
+		} else {
+			bq.log.Info("batch was not valid extension")
 		}
 	}
 
