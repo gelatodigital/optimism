@@ -36,7 +36,6 @@ type BatchQueue struct {
 	originOpen              bool // true if the last origin expects more batches
 	highestL1InclusionBlock eth.L1BlockRef
 	config                  *rollup.Config
-	dl                      L1ReceiptsFetcher
 	next                    BatchQueueOutput
 
 	l1Blocks []eth.L1BlockRef
@@ -52,11 +51,10 @@ type BatchQueue struct {
 }
 
 // NewBatchQueue creates a BatchQueue, which should be Reset(origin) before use.
-func NewBatchQueue(log log.Logger, cfg *rollup.Config, dl L1ReceiptsFetcher, next BatchQueueOutput) *BatchQueue {
+func NewBatchQueue(log log.Logger, cfg *rollup.Config, next BatchQueueOutput) *BatchQueue {
 	return &BatchQueue{
 		log:             log,
 		config:          cfg,
-		dl:              dl,
 		next:            next,
 		batchesByNumber: make(map[uint64][]*BatchWithL1InclusionBlock),
 	}
@@ -304,7 +302,7 @@ func (bq *BatchQueue) tryPopNextBatch(l2SafeHead eth.L2BlockRef) *BatchWithL1Inc
 		}
 
 		// We have a valid batch, no make sure that it builds off the previous L2 block
-		if validExtension(bq.config, batch, l2SafeHead.Number, l2SafeHead.Number, l2SafeHead.L1Origin.Number) {
+		if validExtension(bq.config, batch, l2SafeHead.Number, l2SafeHead.Time, l2SafeHead.L1Origin.Number) {
 			// Advance the epoch if needed
 			if l2SafeHead.L1Origin.Number != uint64(batch.Batch.Epoch) {
 				bq.l1Blocks = bq.l1Blocks[1:]

@@ -80,7 +80,7 @@ type DerivationPipeline struct {
 func NewDerivationPipeline(log log.Logger, cfg *rollup.Config, l1Fetcher L1Fetcher, engine Engine) *DerivationPipeline {
 	eng := NewEngineQueue(log, cfg, engine)
 	payloadQueue := NewPayloadQueue(log, cfg, l1Fetcher, eng)
-	batchQueue := NewBatchQueue(log, cfg, l1Fetcher, payloadQueue)
+	batchQueue := NewBatchQueue(log, cfg, payloadQueue)
 	chInReader := NewChannelInReader(log, batchQueue)
 	bank := NewChannelBank(log, cfg, chInReader)
 	dataSrc := NewCalldataSource(log, cfg, l1Fetcher)
