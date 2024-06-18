@@ -18,5 +18,5 @@ export CONTRACT_ADDRESSES_PATH="deployments/${DEPLOYMENT_CONTEXT}/.deploy"
 export DEPLOY_CONFIG_PATH="deploy-config/${DEPLOYMENT_CONTEXT}.json"
 export DEPLOYMENT_OUTFILE="$CONTRACT_ADDRESSES_PATH.updated"
 
-forge script scripts/UpdateRoles.s.sol:UpdateRoles --sig 'updateGuardian()' --private-key $ADMIN_PK --rpc-url $RPC_URL --broadcast --legacy
+forge script scripts/UpdateImmutables.s.sol:UpdateImmutables --sig 'updateAll()' --private-key $ADMIN_PK --rpc-url $RPC_URL --broadcast --legacy
 
