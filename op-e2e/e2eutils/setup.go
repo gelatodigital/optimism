@@ -189,6 +189,7 @@ func Setup(t require.TestingT, deployParams *DeployParams, alloc *AllocParams) *
 		GraniteTime:            deployConf.GraniteTime(uint64(deployConf.L1GenesisBlockTimestamp)),
 		InteropTime:            deployConf.InteropTime(uint64(deployConf.L1GenesisBlockTimestamp)),
 		AltDAConfig:            pcfg,
+		L1PriceOracleAddress:   deployConf.L1PriceOracleAddress,
 	}
 
 	require.NoError(t, rollupCfg.Check())

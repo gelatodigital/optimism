@@ -150,6 +150,8 @@ abstract contract Artifacts {
             return payable(Predeploys.SCHEMA_REGISTRY);
         } else if (digest == keccak256(bytes("EAS"))) {
             return payable(Predeploys.EAS);
+        } else if (digest == keccak256(bytes("L2PriceOracle"))) {
+            return payable(Predeploys.L2_PRICE_ORACLE);
         }
         return payable(address(0));
     }

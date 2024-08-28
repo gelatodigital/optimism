@@ -22,6 +22,7 @@ import (
 // (which is well tested) and that it properly sets NoTxPool and adds in the candidate
 // transactions.
 func TestAttributesQueue(t *testing.T) {
+	logger := testlog.Logger(t, log.LevelError)
 	// test config, only init the necessary fields
 	cfg := &rollup.Config{
 		BlockTime:              2,
@@ -77,9 +78,9 @@ func TestAttributesQueue(t *testing.T) {
 		NoTxPool:              true,
 		GasLimit:              (*eth.Uint64Quantity)(&expectedL1Cfg.GasLimit),
 	}
-	attrBuilder := NewFetchingAttributesBuilder(cfg, l1Fetcher, l2Fetcher)
+	attrBuilder := NewFetchingAttributesBuilder(logger, cfg, l1Fetcher, l2Fetcher)
 
-	aq := NewAttributesQueue(testlog.Logger(t, log.LevelError), cfg, attrBuilder, nil)
+	aq := NewAttributesQueue(logger, cfg, attrBuilder, nil)
 
 	actual, err := aq.createNextAttributes(context.Background(), &batch, safeHead)
 

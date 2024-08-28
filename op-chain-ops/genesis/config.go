@@ -350,6 +350,9 @@ type UpgradeScheduleDeployConfig struct {
 
 	// UseInterop is a flag that indicates if the system is using interop
 	UseInterop bool `json:"useInterop,omitempty"`
+
+	// L1PriceOracleAddress can be omitted or set to the zero address to disable the price oracle.
+	L1PriceOracleAddress common.Address `json:"l1PriceOracleAddress,omitempty"`
 }
 
 var _ ConfigChecker = (*UpgradeScheduleDeployConfig)(nil)
@@ -904,6 +907,7 @@ func (d *DeployConfig) RollupConfig(l1StartBlock *types.Block, l2GenesisBlockHas
 		GraniteTime:            d.GraniteTime(l1StartBlock.Time()),
 		InteropTime:            d.InteropTime(l1StartBlock.Time()),
 		AltDAConfig:            altDA,
+		L1PriceOracleAddress:   d.L1PriceOracleAddress,
 	}, nil
 }
 

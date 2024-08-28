@@ -255,6 +255,7 @@ contract L2Genesis is Deployer {
             setSuperchainWETH(); // 24
             setETHLiquidity(); // 25
         }
+        setL2PriceOracle(); // 420
     }
 
     function setProxyAdmin() public {
@@ -495,6 +496,12 @@ contract L2Genesis is Deployer {
     ///         This contract has no initializer.
     function setSuperchainWETH() internal {
         _setImplementationCode(Predeploys.SUPERCHAIN_WETH);
+    }
+
+    /// @notice This predeploy is following the safety invariant #1.
+    ///         This contract has no initializer.
+    function setL2PriceOracle() public {
+        _setImplementationCode(Predeploys.L2_PRICE_ORACLE);
     }
 
     /// @notice Sets all the preinstalls.

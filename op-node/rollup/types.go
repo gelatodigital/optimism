@@ -139,6 +139,9 @@ type Config struct {
 
 	// AltDAConfig. We are in the process of migrating to the AltDAConfig from these legacy top level values
 	AltDAConfig *AltDAConfig `json:"alt_da,omitempty"`
+
+	// L1 Price Oracle Address
+	L1PriceOracleAddress common.Address `json:"l1_price_oracle_address,omitempty"`
 }
 
 // ValidateL1Config checks L1 config variables for errors.

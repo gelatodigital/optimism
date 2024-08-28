@@ -71,5 +71,6 @@
   "daChallengeWindow": 16,
   "daResolveWindow": 16,
   "daBondSize": 1000000,
-  "daResolverRefundPercentage": 0
+  "daResolverRefundPercentage": 0,
+  "l1PriceOracleAddress": "0x449cE522478b882fEF289BE52cE090cb7261bB1C"
 }

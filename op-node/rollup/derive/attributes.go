@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
@@ -25,13 +26,15 @@ type SystemConfigL2Fetcher interface {
 
 // FetchingAttributesBuilder fetches inputs for the building of L2 payload attributes on the fly.
 type FetchingAttributesBuilder struct {
+	log       log.Logger
 	rollupCfg *rollup.Config
 	l1        L1ReceiptsFetcher
 	l2        SystemConfigL2Fetcher
 }
 
-func NewFetchingAttributesBuilder(rollupCfg *rollup.Config, l1 L1ReceiptsFetcher, l2 SystemConfigL2Fetcher) *FetchingAttributesBuilder {
+func NewFetchingAttributesBuilder(log log.Logger, rollupCfg *rollup.Config, l1 L1ReceiptsFetcher, l2 SystemConfigL2Fetcher) *FetchingAttributesBuilder {
 	return &FetchingAttributesBuilder{
+		log:       log,
 		rollupCfg: rollupCfg,
 		l1:        l1,
 		l2:        l2,
@@ -46,6 +49,7 @@ func NewFetchingAttributesBuilder(rollupCfg *rollup.Config, l1 L1ReceiptsFetcher
 func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Context, l2Parent eth.L2BlockRef, epoch eth.BlockID) (attrs *eth.PayloadAttributes, err error) {
 	var l1Info eth.BlockInfo
 	var depositTxs []hexutil.Bytes
+	var priceOracleTx []byte
 	var seqNumber uint64
 
 	sysConfig, err := ba.l2.SystemConfigByL2Hash(ctx, l2Parent.Hash)
@@ -55,7 +59,7 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 
 	// If the L1 origin changed in this block, then we are in the first block of the epoch. In this
 	// case we need to fetch all transaction receipts from the L1 origin block so we can scan for
-	// user deposits.
+	// user deposits and price oracle updates.
 	if l2Parent.L1Origin.Number != epoch.Number {
 		info, receipts, err := ba.l1.FetchReceipts(ctx, epoch.Hash)
 		if err != nil {
@@ -75,6 +79,10 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 		// apply sysCfg changes
 		if err := UpdateSystemConfigWithL1Receipts(&sysConfig, receipts, ba.rollupCfg, info.Time()); err != nil {
 			return nil, NewCriticalError(fmt.Errorf("failed to apply derived L1 sysCfg updates: %w", err))
+		}
+		priceOracleTx, err = PriceOracleDepositBytes(receipts, ba.rollupCfg.L1PriceOracleAddress)
+		if err != nil {
+			ba.log.Error("failed to create price oracle deposit", "err", err)
 		}
 
 		l1Info = info
@@ -121,10 +129,17 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 		return nil, NewCriticalError(fmt.Errorf("failed to create l1InfoTx: %w", err))
 	}
 
-	txs := make([]hexutil.Bytes, 0, 1+len(depositTxs)+len(upgradeTxs))
+	var txCnt = 1 + len(depositTxs) + len(upgradeTxs)
+	if priceOracleTx != nil {
+		txCnt++
+	}
+	txs := make([]hexutil.Bytes, 0, txCnt)
 	txs = append(txs, l1InfoTx)
 	txs = append(txs, depositTxs...)
 	txs = append(txs, upgradeTxs...)
+	if priceOracleTx != nil {
+		txs = append(txs, priceOracleTx)
+	}
 
 	var withdrawals *types.Withdrawals
 	if ba.rollupCfg.IsCanyon(nextL2Time) {
