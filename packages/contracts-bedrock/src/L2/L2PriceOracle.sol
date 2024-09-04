@@ -42,7 +42,7 @@ contract L2PriceOracle is ISemver {
 
     function getPriceNoOlderThan(bytes32 id, uint256 age) external view returns (PythStructs.Price memory price_) {
         price_ = getPriceUnsafe(id);
-        if (price_.publishTime + age > block.timestamp)
+        if (price_.publishTime + age < block.timestamp)
             revert PythErrors.StalePrice();
     }
 }
